@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import glob
+import random
+from tqdm import tqdm
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -11,12 +13,15 @@ from sklearn.preprocessing import MinMaxScaler
 stocks_path = "data/Stocks/"
 
 
-# Create a function to read and concatenate all files in a folder
-def concatenate_files(folder_path):
+def concatenate_files(folder_path, sample_size=None):
     all_files = glob.glob(os.path.join(folder_path, "*.txt"))
+
+    if sample_size is not None:
+        all_files = random.sample(all_files, sample_size)
+
     data_list = []
 
-    for file in all_files:
+    for file in tqdm(all_files, desc="Processing stock files"):
         ticker = os.path.basename(file).split(".")[0]
         try:
             df = pd.read_csv(file)
@@ -30,8 +35,9 @@ def concatenate_files(folder_path):
     return pd.concat(data_list, axis=0, ignore_index=True)
 
 
-# Read and concatenate all stock files
-all_stocks_data = concatenate_files(stocks_path)
+# Read and concatenate a sample of all stock files
+sample_size = 1000
+all_stocks_data = concatenate_files(stocks_path, sample_size=sample_size)
 
 # Calculate the percentage change in closing price
 all_stocks_data["Close_pct_change"] = all_stocks_data.groupby("Ticker")[
