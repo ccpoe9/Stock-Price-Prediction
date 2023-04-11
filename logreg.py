@@ -40,15 +40,17 @@ def preprocess_data(data, days_ahead=30):
     data["Label"] = data["Label"].astype(int)
     # Add a new column with the 30-day moving average of the close price
     data["30_day_moving_average"] = data["Close"].rolling(window=30).mean()
+    # Convert the 'Date' column to ordinal numbers
+    data["Date"] = data["Date"].apply(lambda x: x.toordinal())
 
     # Drop rows with NaN values caused by the moving average calculation
     data.dropna(inplace=True)
     return data
 
 
-def train_test(data, features, target):
-    X = data[features]
-    y = data[target]
+def train_test(data):
+    X = data.drop(columns="Label")
+    y = data["Label"]
 
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
@@ -85,20 +87,7 @@ def main():
     le = LabelEncoder()
     data["Symbol"] = le.fit_transform(data["Symbol"])
 
-    # Select the features and target
-    features = [
-        "Open",
-        "High",
-        "Low",
-        "Close",
-        "Volume",
-        "OpenInt",
-        "30_day_moving_average",
-        "Symbol",
-    ]
-    target = "Label"
-
-    train_test(data, features, target)
+    train_test(data)
 
 
 if __name__ == "__main__":
