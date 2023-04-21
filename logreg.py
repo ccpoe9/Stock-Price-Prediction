@@ -22,6 +22,8 @@ def load_data(directory):
             symbol = filename.split(".")[0]
             # Read the stock data from the file and store it in a DataFrame
             stock_df = pd.read_csv(file_path, parse_dates=["Date"])
+            # Set 'Date' as the index, preserving time series order
+            stock_df.set_index("Date", inplace=True)
             # Add a new column to the DataFrame containing the stock symbol
             stock_df["Symbol"] = symbol
             # Append the stock DataFrame to the stock_data list
@@ -32,26 +34,21 @@ def load_data(directory):
     return combined_df
 
 
-def preprocess_data(data, days_ahead=30):
+def preprocess_data(data, days_ahead=30, window_size=30):
     # Create a new column 'Label' that is True when
     # the close price is higher in 'days_ahead' days
     data["Label"] = data["Close"].shift(-days_ahead) > data["Close"]
     # Convert the 'Label' column to an integer (True = 1, False = 0)
     data["Label"] = data["Label"].astype(int)
     # Add a new column with the 30-day moving average of the close price
-    data["30_day_moving_average"] = data["Close"].rolling(window=30).mean()
-    # Convert the 'Date' column to ordinal numbers
-    data["Date"] = data["Date"].apply(lambda x: x.toordinal())
+    data["30_day_moving_average"] = data["Close"].rolling(window=window_size).mean()
 
     # Drop rows with NaN values caused by the moving average calculation
     data.dropna(inplace=True)
     return data
 
 
-def train_test(data):
-    X = data.drop(columns="Label")
-    y = data["Label"]
-
+def train_test(data, X, y):
     # Split the data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
@@ -87,7 +84,12 @@ def main():
     le = LabelEncoder()
     data["Symbol"] = le.fit_transform(data["Symbol"])
 
-    train_test(data)
+    # Split the data into features and target
+    X = data.drop(columns=["Label", "Symbol"])
+    y = data["Label"]
+
+    # Train and test the model
+    train_test(data, X, y)
 
 
 if __name__ == "__main__":
