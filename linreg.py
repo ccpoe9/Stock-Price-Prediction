@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error, r2_score
 
 
@@ -34,12 +34,12 @@ def train_test(X, y):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     # Create the logistic regression model
-    rf = RandomForestRegressor(n_estimators=200, max_depth=15)
-    rf.fit(X_train, y_train)
+    lr = LinearRegression()
+    lr.fit(X_train, y_train)
 
     # Make predictions
-    train_pred = rf.predict(X_train).flatten()
-    test_pred = rf.predict(X_test).flatten()
+    train_pred = lr.predict(X_train).flatten()
+    test_pred = lr.predict(X_test).flatten()
 
     # Evaluate the performance of the model
     trainScore = np.sqrt(mean_squared_error(y_train, train_pred))
