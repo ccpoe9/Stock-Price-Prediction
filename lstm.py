@@ -17,6 +17,28 @@ def preprocess_data(df, days_ahead=30, window_size=30):
     return df
 
 
+def load_data(stock):
+    stock = stock.upper()
+    df = pd.read_csv(
+        f"nasdaq/{stock}.csv",
+        parse_dates=["Date"],
+        dayfirst=True,
+    )
+    df = preprocess_data(df)
+    df.index = df.pop("Date")
+    return df
+
+
+def split_data(X, y, test_ratio=0.1, val_ratio=0.1):
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=test_ratio + val_ratio, shuffle=False
+    )
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=test_ratio / (test_ratio + val_ratio), shuffle=False
+    )
+    return X_train, X_val, X_test, y_train, y_val, y_test
+
+
 def df_to_windowed_df(df, n=3):
     last_date = df.index.max()
     target_date = df.index[n]
@@ -81,24 +103,19 @@ def windowed_df_to_date_X_y(windowed_dataframe):
 
 
 if __name__ == "__main__":
-    df = pd.read_csv("nasdaq/AAL.csv", parse_dates=["Date"], dayfirst=True)
-    df = preprocess_data(df)
-
-    df.index = df.pop("Date")
+    df = load_data("aal")
 
     X = df.drop(columns="Label")
     y = df["Label"]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
     windowed_df = df_to_windowed_df(df, n=3)
     dates, X, y = windowed_df_to_date_X_y(windowed_df)
-    q_80 = int(len(dates) * 0.8)
-    q_90 = int(len(dates) * 0.9)
+    X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y)
 
-    dates_train, X_train, y_train = dates[:q_80], X[:q_80], y[:q_80]
-    dates_val, X_val, y_val = dates[q_80:q_90], X[q_80:q_90], y[q_80:q_90]
-    dates_test, X_test, y_test = dates[q_90:], X[q_90:], y[q_90:]
+    dates_train = dates[: len(X_train)]
+    dates_val = dates[len(X_train) : len(X_train) + len(X_val)]
+    dates_test = dates[len(X_train) + len(X_val) :]
+
     model = Sequential(
         [
             layers.Input((3, 1)),
@@ -120,31 +137,23 @@ if __name__ == "__main__":
     test_pred = model.predict(X_test).flatten()
 
     # training data
-    plt.plot(dates_train, train_pred)
-    plt.plot(dates_train, y_train)
+    plt.plot(dates_train, train_pred, label="Training Predictions")
+    plt.plot(dates_train, y_train, label="Training Observations")
 
     # validation data
-    plt.plot(dates_val, val_pred)
-    plt.plot(dates_val, y_val)
+    plt.plot(dates_val, val_pred, label="Validation Predictions")
+    plt.plot(dates_val, y_val, label="Validation Observations")
 
     # testing data
-    plt.plot(dates_test, test_pred)
-    plt.plot(dates_test, y_test)
-    plt.legend(
-        [
-            "Training Predictions",
-            "Training Observations",
-            "Validation Predictions",
-            "Validation Observations",
-            "Testing Predictions",
-            "Testing Observations",
-        ]
-    )
+    plt.plot(dates_test, test_pred, label="Testing Predictions")
+    plt.plot(dates_test, y_test, label="Testing Observations")
+    plt.title("Close Price and Predictions")
+    plt.legend()
     plt.show()
 
     trainScore = np.sqrt(mean_squared_error(y_train, train_pred))
     print("Train Score: %.2f RMSE" % (trainScore))
     valScore = np.sqrt(mean_squared_error(y_val, val_pred))
-    print("Cross Validation Score: %.2f RMSE" % (trainScore))
+    print("Cross Validation Score: %.2f RMSE" % (valScore))
     testScore = np.sqrt(mean_squared_error(y_test, test_pred))
     print("Test Score: %.2f RMSE" % (testScore))
