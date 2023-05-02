@@ -2,8 +2,8 @@ import datetime
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score
-from sklearn.metrics import accuracy_score, mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import layers
@@ -103,7 +103,7 @@ def windowed_df_to_date_X_y(windowed_dataframe):
 
 
 if __name__ == "__main__":
-    df = load_data("aal")
+    df = load_data("AAL")
 
     X = df.drop(columns="Label")
     y = df["Label"]

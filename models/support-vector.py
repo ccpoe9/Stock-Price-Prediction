@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error
+from sklearn.svm import SVR
+from sklearn.preprocessing import StandardScaler
 
 
 def preprocess_data(df, days_ahead=30, window_size=30):
@@ -44,14 +45,19 @@ def train_test(X, y):
     # Split the data into training and testing sets
     X_train, X_val, X_test, y_train, y_val, y_test = split_data(X, y)
 
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_val_scaled = scaler.transform(X_val)
+    X_test_scaled = scaler.transform(X_test)
+
     # Create the logistic regression model
-    rf = RandomForestRegressor(n_estimators=200, max_depth=15)
-    rf.fit(X_train, y_train)
+    svm = SVR(kernel="linear", C=1)
+    svm.fit(X_train_scaled, y_train)
 
     # Make predictions
-    train_pred = rf.predict(X_train).flatten()
-    val_pred = rf.predict(X_val).flatten()
-    test_pred = rf.predict(X_test).flatten()
+    train_pred = svm.predict(X_train_scaled).flatten()
+    val_pred = svm.predict(X_val_scaled).flatten()
+    test_pred = svm.predict(X_test_scaled).flatten()
 
     # Evaluate the performance of the model
     trainScore = np.sqrt(mean_squared_error(y_train, train_pred))
@@ -61,17 +67,42 @@ def train_test(X, y):
     testScore = np.sqrt(mean_squared_error(y_test, test_pred))
     print("Test Score: %.2f RMSE" % (testScore))
 
+    return train_pred, val_pred, test_pred
+
 
 def main():
     # Load and preprocess the data
-    df = load_data("AMZN")
+    df = load_data("AAL")
 
     # Split the data into features and target
     X = df.drop(columns="Label")
     y = df["Label"]
 
     # Train and test the model
-    train_test(X, y)
+    train_pred, val_pred, test_pred = train_test(X, y)
+
+    sorted_dates = df.index.sort_values()
+    sorted_close_prices = df.loc[sorted_dates, "Close"]
+
+    dates_train = sorted_dates[: len(train_pred)]
+    dates_val = sorted_dates[len(train_pred) : len(train_pred) + len(val_pred)]
+    dates_test = sorted_dates[len(train_pred) + len(val_pred) :]
+
+    # Plot the close prices
+    plt.plot(sorted_dates, sorted_close_prices, label="Close Prices", alpha=0.7)
+    # Plot the predictions
+    plt.plot(dates_train, train_pred, label="Training Predictions")
+    plt.plot(dates_val, val_pred, label="Validation Predictions")
+    plt.plot(dates_test, test_pred, label="Testing Predictions")
+
+    # Add labels and legend
+    plt.xlabel("Date")
+    plt.ylabel("Close Price")
+    plt.title("Close Price and Predictions")
+    plt.legend()
+
+    # Show the plot
+    plt.show()
 
 
 if __name__ == "__main__":
