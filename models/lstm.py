@@ -20,7 +20,7 @@ def preprocess_data(df, days_ahead=30, window_size=30):
 def load_data(stock):
     stock = stock.upper()
     df = pd.read_csv(
-        f"nasdaq/{stock}.csv",
+        f"../nasdaq/{stock}.csv",
         parse_dates=["Date"],
         dayfirst=True,
     )
